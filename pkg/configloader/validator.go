@@ -1,4 +1,4 @@
-package auconfigloader
+package configloader
 
 import (
 	"fmt"
