@@ -1,33 +1,51 @@
 package configloader
 
 import (
-	"errors"
-	"fmt"
-
 	auconfigapi "github.com/StephanHCB/go-autumn-config-api"
 )
 
-type ConfigurationLoader struct {
+type ConfigLoader struct {
 	providers []Provider
+	values    map[string]string
 }
 
-func New(providers ...Provider) *ConfigurationLoader {
-	return &ConfigurationLoader{
-		providers: providers,
+type Config interface {
+	ConfigItems() []auconfigapi.ConfigItem
+
+	ObtainValues(getter func(string) string) error
+}
+
+type Provider func([]auconfigapi.ConfigItem) (map[string]string, error)
+
+func New() *ConfigLoader {
+	return &ConfigLoader{
+		values: make(map[string]string),
 	}
 }
 
-func (l *ConfigurationLoader) ObtainValues(
+func (l *ConfigLoader) LoadConfig(config Config, providers ...Provider) error {
+	if err := l.LoadValues(config.ConfigItems(), providers...); err != nil {
+		return err
+	}
+	return config.ObtainValues(l.Get)
+}
+
+func (l *ConfigLoader) Get(key string) string {
+	return l.values[key]
+}
+
+func (l *ConfigLoader) LoadValues(
 	configItems []auconfigapi.ConfigItem,
-) (map[string]string, error) {
-	values, err := loadValues(configItems, l.providers...)
+	providers ...Provider,
+) error {
+	values, err := loadValues(configItems, providers...)
 	if err != nil {
-		return nil, err
+		return err
 	}
-	if err = validateValues(configItems, values); err != nil {
-		return nil, err
+	for key, value := range values {
+		l.values[key] = value
 	}
-	return values, nil
+	return nil
 }
 
 func loadValues(
@@ -48,20 +66,4 @@ func loadValues(
 		}
 	}
 	return rawValues, nil
-}
-
-func validateValues(
-	configItems []auconfigapi.ConfigItem,
-	values map[string]string,
-) error {
-	var errs = make([]error, 0)
-	for _, it := range configItems {
-		if it.Validate != nil {
-			err := it.Validate(values[it.Key])
-			if err != nil {
-				errs = append(errs, fmt.Errorf("failed to validate configuration value of %s: %s", it.Key, err.Error()))
-			}
-		}
-	}
-	return errors.Join(errs...)
 }

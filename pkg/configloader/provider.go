@@ -8,8 +8,6 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-type Provider func([]auconfigapi.ConfigItem) (map[string]string, error)
-
 func CreateDefaultValuesProvider() Provider {
 	return func(configItems []auconfigapi.ConfigItem) (map[string]string, error) {
 		rawValues := make(map[string]string)
