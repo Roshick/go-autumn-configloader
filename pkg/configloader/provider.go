@@ -1,19 +1,18 @@
-package provider
+package configloader
 
 import (
 	"fmt"
 	"os"
 
-	"github.com/Roshick/go-autumn-configloader/pkg/configloader"
 	"gopkg.in/yaml.v3"
 )
 
 type DefaultValuesProviderConfigItem interface {
-	configloader.ConfigItem
+	ConfigItem
 	GetDefaultValue() *string
 }
 
-func CreateDefaultValuesProvider() configloader.Provider[DefaultValuesProviderConfigItem] {
+func CreateDefaultValuesProvider() Provider[DefaultValuesProviderConfigItem] {
 	return func(configItems []DefaultValuesProviderConfigItem) (map[string]string, error) {
 		rawValues := make(map[string]string)
 		for _, it := range configItems {
@@ -27,11 +26,11 @@ func CreateDefaultValuesProvider() configloader.Provider[DefaultValuesProviderCo
 }
 
 type YAMLConfigFileProviderConfigItem interface {
-	configloader.ConfigItem
+	ConfigItem
 	GetConfigFileKey() *string
 }
 
-func CreateYAMLConfigFileProvider(filename string) configloader.Provider[YAMLConfigFileProviderConfigItem] {
+func CreateYAMLConfigFileProvider(filename string) Provider[ConfigItem] {
 	return func(configItems []YAMLConfigFileProviderConfigItem) (map[string]string, error) {
 		_, err := os.Stat(filename)
 		if os.IsNotExist(err) {
@@ -66,11 +65,11 @@ func CreateYAMLConfigFileProvider(filename string) configloader.Provider[YAMLCon
 }
 
 type EnvironmentVariablesProviderConfigItem interface {
-	configloader.ConfigItem
+	ConfigItem
 	GetEnvironmentKey() *string
 }
 
-func CreateEnvironmentVariablesProvider() configloader.Provider[EnvironmentVariablesProviderConfigItem] {
+func CreateEnvironmentVariablesProvider() Provider[EnvironmentVariablesProviderConfigItem] {
 	return func(configItems []EnvironmentVariablesProviderConfigItem) (map[string]string, error) {
 		values := make(map[string]string)
 		for _, it := range configItems {

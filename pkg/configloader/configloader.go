@@ -1,38 +1,42 @@
 package configloader
 
-type ConfigLoader[ConfigItem any] struct {
-	providers []Provider[ConfigItem]
+type ConfigItem interface {
+	GetKey() string
+}
+
+type ConfigLoader[C ConfigItem] struct {
+	providers []Provider[C]
 	values    map[string]string
 }
 
-type Config[ConfigItem any] interface {
-	ConfigItems() []ConfigItem
+type Config[C ConfigItem] interface {
+	ConfigItems() []C
 
 	ObtainValues(getter func(string) string) error
 }
 
-type Provider[ConfigItem any] func([]ConfigItem) (map[string]string, error)
+type Provider[C ConfigItem] func([]C) (map[string]string, error)
 
-func New[ConfigItem any]() *ConfigLoader[ConfigItem] {
-	return &ConfigLoader[ConfigItem]{
+func New[C ConfigItem]() *ConfigLoader[C] {
+	return &ConfigLoader[C]{
 		values: make(map[string]string),
 	}
 }
 
-func (l *ConfigLoader[ConfigItem]) LoadConfig(config Config[ConfigItem], providers ...Provider[ConfigItem]) error {
+func (l *ConfigLoader[C]) LoadConfig(config Config[C], providers ...Provider[C]) error {
 	if err := l.LoadValues(config.ConfigItems(), providers...); err != nil {
 		return err
 	}
 	return config.ObtainValues(l.Get)
 }
 
-func (l *ConfigLoader[ConfigItem]) Get(key string) string {
+func (l *ConfigLoader[C]) Get(key string) string {
 	return l.values[key]
 }
 
-func (l *ConfigLoader[ConfigItem]) LoadValues(
-	configItems []ConfigItem,
-	providers ...Provider[ConfigItem],
+func (l *ConfigLoader[C]) LoadValues(
+	configItems []C,
+	providers ...Provider[C],
 ) error {
 	values, err := loadValues(configItems, providers...)
 	if err != nil {
@@ -44,9 +48,9 @@ func (l *ConfigLoader[ConfigItem]) LoadValues(
 	return nil
 }
 
-func loadValues[ConfigItem any](
-	configItems []ConfigItem,
-	providers ...Provider[ConfigItem],
+func loadValues[C ConfigItem](
+	configItems []C,
+	providers ...Provider[C],
 ) (map[string]string, error) {
 	rawValues := make(map[string]string)
 	for _, provider := range providers {
