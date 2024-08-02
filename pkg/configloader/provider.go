@@ -1,29 +1,38 @@
-package configloader
+package provider
 
 import (
 	"fmt"
 	"os"
 
-	auconfigapi "github.com/StephanHCB/go-autumn-config-api"
+	"github.com/Roshick/go-autumn-configloader/pkg/configloader"
 	"gopkg.in/yaml.v3"
 )
 
-func CreateDefaultValuesProvider() Provider {
-	return func(configItems []auconfigapi.ConfigItem) (map[string]string, error) {
+type DefaultValuesProviderConfigItem interface {
+	configloader.ConfigItem
+	GetDefaultValue() *string
+}
+
+func CreateDefaultValuesProvider() configloader.Provider[DefaultValuesProviderConfigItem] {
+	return func(configItems []DefaultValuesProviderConfigItem) (map[string]string, error) {
 		rawValues := make(map[string]string)
 		for _, it := range configItems {
-			defaultValue, ok := it.Default.(string)
-			if !ok {
-				return nil, fmt.Errorf("failed to load default value of key %s: value is not a string", it.Key)
+			if it.GetDefaultValue() == nil {
+				continue
 			}
-			rawValues[it.Key] = defaultValue
+			rawValues[it.GetKey()] = *it.GetDefaultValue()
 		}
 		return rawValues, nil
 	}
 }
 
-func CreateYAMLConfigFileProvider(filename string) Provider {
-	return func(configItems []auconfigapi.ConfigItem) (map[string]string, error) {
+type YAMLConfigFileProviderConfigItem interface {
+	configloader.ConfigItem
+	GetConfigFileKey() *string
+}
+
+func CreateYAMLConfigFileProvider(filename string) configloader.Provider[YAMLConfigFileProviderConfigItem] {
+	return func(configItems []YAMLConfigFileProviderConfigItem) (map[string]string, error) {
 		_, err := os.Stat(filename)
 		if os.IsNotExist(err) {
 			// this is NOT an error
@@ -45,21 +54,32 @@ func CreateYAMLConfigFileProvider(filename string) Provider {
 
 		values := make(map[string]string)
 		for _, it := range configItems {
-			if value, ok := allValues[it.Key]; ok {
-				values[it.Key] = value
+			if it.GetConfigFileKey() == nil {
+				continue
+			}
+			if value, ok := allValues[*it.GetConfigFileKey()]; ok {
+				values[it.GetKey()] = value
 			}
 		}
 		return values, nil
 	}
 }
 
-func CreateEnvironmentVariablesProvider() Provider {
-	return func(configItems []auconfigapi.ConfigItem) (map[string]string, error) {
+type EnvironmentVariablesProviderConfigItem interface {
+	configloader.ConfigItem
+	GetEnvironmentKey() *string
+}
+
+func CreateEnvironmentVariablesProvider() configloader.Provider[EnvironmentVariablesProviderConfigItem] {
+	return func(configItems []EnvironmentVariablesProviderConfigItem) (map[string]string, error) {
 		values := make(map[string]string)
 		for _, it := range configItems {
-			envValue, ok := os.LookupEnv(it.EnvName)
+			if it.GetEnvironmentKey() == nil {
+				continue
+			}
+			value, ok := os.LookupEnv(*it.GetEnvironmentKey())
 			if ok {
-				values[it.Key] = envValue
+				values[it.GetKey()] = value
 			}
 		}
 		return values, nil

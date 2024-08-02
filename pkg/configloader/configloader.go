@@ -1,42 +1,38 @@
 package configloader
 
-import (
-	auconfigapi "github.com/StephanHCB/go-autumn-config-api"
-)
-
-type ConfigLoader struct {
-	providers []Provider
+type ConfigLoader[ConfigItem any] struct {
+	providers []Provider[ConfigItem]
 	values    map[string]string
 }
 
-type Config interface {
-	ConfigItems() []auconfigapi.ConfigItem
+type Config[ConfigItem any] interface {
+	ConfigItems() []ConfigItem
 
 	ObtainValues(getter func(string) string) error
 }
 
-type Provider func([]auconfigapi.ConfigItem) (map[string]string, error)
+type Provider[ConfigItem any] func([]ConfigItem) (map[string]string, error)
 
-func New() *ConfigLoader {
-	return &ConfigLoader{
+func New[ConfigItem any]() *ConfigLoader[ConfigItem] {
+	return &ConfigLoader[ConfigItem]{
 		values: make(map[string]string),
 	}
 }
 
-func (l *ConfigLoader) LoadConfig(config Config, providers ...Provider) error {
+func (l *ConfigLoader[ConfigItem]) LoadConfig(config Config[ConfigItem], providers ...Provider[ConfigItem]) error {
 	if err := l.LoadValues(config.ConfigItems(), providers...); err != nil {
 		return err
 	}
 	return config.ObtainValues(l.Get)
 }
 
-func (l *ConfigLoader) Get(key string) string {
+func (l *ConfigLoader[ConfigItem]) Get(key string) string {
 	return l.values[key]
 }
 
-func (l *ConfigLoader) LoadValues(
-	configItems []auconfigapi.ConfigItem,
-	providers ...Provider,
+func (l *ConfigLoader[ConfigItem]) LoadValues(
+	configItems []ConfigItem,
+	providers ...Provider[ConfigItem],
 ) error {
 	values, err := loadValues(configItems, providers...)
 	if err != nil {
@@ -48,9 +44,9 @@ func (l *ConfigLoader) LoadValues(
 	return nil
 }
 
-func loadValues(
-	configItems []auconfigapi.ConfigItem,
-	providers ...Provider,
+func loadValues[ConfigItem any](
+	configItems []ConfigItem,
+	providers ...Provider[ConfigItem],
 ) (map[string]string, error) {
 	rawValues := make(map[string]string)
 	for _, provider := range providers {
